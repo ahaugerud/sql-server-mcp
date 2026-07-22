@@ -1,0 +1,54 @@
+import pytest
+
+from sql_server_mcp.config import ConfigError, load_settings
+
+
+@pytest.fixture(autouse=True)
+def base_env(monkeypatch):
+    monkeypatch.setenv("MCP_SQL_SERVER_NAME", "myserver.fabric.microsoft.com")
+    monkeypatch.setenv("MCP_SQL_DATABASE_NAME", "mydb")
+    monkeypatch.setenv("MCP_AZURE_TENANT_ID", "11111111-1111-1111-1111-111111111111")
+
+
+def test_load_settings_reads_required_and_optional_vars(monkeypatch):
+    monkeypatch.setenv("MCP_MAX_ROWS", "10")
+
+    settings = load_settings()
+
+    assert settings.sql_server_name == "myserver.fabric.microsoft.com"
+    assert settings.sql_database_name == "mydb"
+    assert settings.tenant_id == "11111111-1111-1111-1111-111111111111"
+    assert settings.max_rows == 10
+
+
+def test_load_settings_defaults_max_rows_to_25(monkeypatch):
+    monkeypatch.delenv("MCP_MAX_ROWS", raising=False)
+
+    settings = load_settings()
+
+    assert settings.max_rows == 25
+
+
+@pytest.mark.parametrize(
+    "missing_var",
+    ["MCP_SQL_SERVER_NAME", "MCP_SQL_DATABASE_NAME", "MCP_AZURE_TENANT_ID"],
+)
+def test_load_settings_raises_on_missing_required_vars(monkeypatch, missing_var):
+    monkeypatch.delenv(missing_var, raising=False)
+
+    with pytest.raises(ConfigError):
+        load_settings()
+
+
+def test_load_settings_rejects_non_integer_max_rows(monkeypatch):
+    monkeypatch.setenv("MCP_MAX_ROWS", "not-a-number")
+
+    with pytest.raises(ConfigError):
+        load_settings()
+
+
+def test_load_settings_rejects_non_positive_max_rows(monkeypatch):
+    monkeypatch.setenv("MCP_MAX_ROWS", "0")
+
+    with pytest.raises(ConfigError):
+        load_settings()
