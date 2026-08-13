@@ -19,6 +19,16 @@ def _fake_token(value="fake-token"):
     return token
 
 
+def test_build_credential_does_not_resolve_eagerly():
+    with patch("sql_server_mcp.credentials.AzureCliCredential") as MockCli, patch(
+        "sql_server_mcp.credentials.InteractiveBrowserCredential"
+    ) as MockBrowser:
+        build_credential("11111111-1111-1111-1111-111111111111")
+
+        MockCli.assert_not_called()
+        MockBrowser.assert_not_called()
+
+
 def test_build_credential_uses_azure_cli_when_it_works():
     with patch("sql_server_mcp.credentials.AzureCliCredential") as MockCli, patch(
         "sql_server_mcp.credentials.InteractiveBrowserCredential"
@@ -26,9 +36,10 @@ def test_build_credential_uses_azure_cli_when_it_works():
         MockCli.return_value.get_token.return_value = _fake_token()
 
         credential = build_credential("11111111-1111-1111-1111-111111111111")
+        token = credential.get_token("scope")
 
         MockCli.assert_called_once_with(tenant_id="11111111-1111-1111-1111-111111111111")
-        assert credential is MockCli.return_value
+        assert token.token == "fake-token"
         MockBrowser.assert_not_called()
 
 
@@ -42,9 +53,10 @@ def test_build_credential_falls_back_to_browser_login():
         MockBrowser.return_value.get_token.return_value = _fake_token()
 
         credential = build_credential("tenant-123")
+        token = credential.get_token("scope")
 
         MockBrowser.assert_called_once_with(tenant_id="tenant-123")
-        assert credential is MockBrowser.return_value
+        assert token.token == "fake-token"
 
 
 def test_build_credential_propagates_browser_login_failure():
@@ -56,8 +68,22 @@ def test_build_credential_propagates_browser_login_failure():
             "browser login also failed"
         )
 
+        credential = build_credential("tenant-123")
         with pytest.raises(ClientAuthenticationError):
-            build_credential("tenant-123")
+            credential.get_token("scope")
+
+
+def test_build_credential_caches_resolved_credential_across_calls():
+    with patch("sql_server_mcp.credentials.AzureCliCredential") as MockCli, patch(
+        "sql_server_mcp.credentials.InteractiveBrowserCredential"
+    ) as MockBrowser:
+        MockCli.return_value.get_token.return_value = _fake_token()
+
+        credential = build_credential("tenant-123")
+        credential.get_token("scope")
+        credential.get_token("scope")
+
+        MockCli.assert_called_once_with(tenant_id="tenant-123")
 
 
 def test_get_access_token_returns_token_string():

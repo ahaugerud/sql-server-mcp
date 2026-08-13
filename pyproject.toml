@@ -1,6 +1,6 @@
 [project]
 name = "sql-server-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "Local, single-user MCP server for read-only SQL Server / MS Fabric queries - one process per tenant"
 readme = "README.md"
 license = "MIT"
