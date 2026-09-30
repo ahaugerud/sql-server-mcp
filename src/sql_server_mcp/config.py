@@ -47,6 +47,15 @@ def load_settings() -> Settings:
             "MCP_SQL_USERNAME and MCP_SQL_PASSWORD must be set together."
         )
 
+    trust_server_certificate = _env_bool("MCP_SQL_TRUST_SERVER_CERTIFICATE")
+    legacy_tls = _env_bool("MCP_SQL_LEGACY_TLS")
+
+    if legacy_tls and username is None:
+        raise ConfigError(
+            "MCP_SQL_LEGACY_TLS requires SQL login (MCP_SQL_USERNAME/"
+            "MCP_SQL_PASSWORD); it is not supported with Entra ID auth."
+        )
+
     required = [
         ("MCP_SQL_SERVER_NAME", server_name),
         ("MCP_SQL_DATABASE_NAME", database_name),
@@ -67,9 +76,6 @@ def load_settings() -> Settings:
         raise ConfigError(f"MCP_MAX_ROWS must be an integer, got {max_rows_raw!r}") from exc
     if max_rows <= 0:
         raise ConfigError("MCP_MAX_ROWS must be a positive integer.")
-
-    trust_server_certificate = _env_bool("MCP_SQL_TRUST_SERVER_CERTIFICATE")
-    legacy_tls = _env_bool("MCP_SQL_LEGACY_TLS")
 
     return Settings(
         sql_server_name=server_name,  # type: ignore[arg-type]

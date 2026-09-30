@@ -91,12 +91,21 @@ def test_load_settings_rejects_invalid_trust_server_certificate(monkeypatch):
 def test_load_settings_legacy_tls(monkeypatch):
     assert load_settings().legacy_tls is False
 
+    monkeypatch.setenv("MCP_SQL_USERNAME", "user")
+    monkeypatch.setenv("MCP_SQL_PASSWORD", "pw")
     monkeypatch.setenv("MCP_SQL_LEGACY_TLS", "true")
     assert load_settings().legacy_tls is True
 
 
 def test_load_settings_rejects_invalid_legacy_tls(monkeypatch):
     monkeypatch.setenv("MCP_SQL_LEGACY_TLS", "maybe")
+
+    with pytest.raises(ConfigError):
+        load_settings()
+
+
+def test_load_settings_legacy_tls_requires_sql_login(monkeypatch):
+    monkeypatch.setenv("MCP_SQL_LEGACY_TLS", "true")
 
     with pytest.raises(ConfigError):
         load_settings()
