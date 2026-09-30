@@ -19,10 +19,20 @@ class Settings:
     password: str | None = None
     max_rows: int = 25
     trust_server_certificate: bool = False
+    legacy_tls: bool = False
 
     @property
     def uses_sql_login(self) -> bool:
         return self.username is not None
+
+
+def _env_bool(name: str) -> bool:
+    raw = os.getenv(name, "false").strip().lower()
+    if raw in ("1", "true", "yes"):
+        return True
+    if raw in ("", "0", "false", "no"):
+        return False
+    raise ConfigError(f"{name} must be true or false, got {raw!r}")
 
 
 def load_settings() -> Settings:
@@ -58,16 +68,8 @@ def load_settings() -> Settings:
     if max_rows <= 0:
         raise ConfigError("MCP_MAX_ROWS must be a positive integer.")
 
-    trust_raw = os.getenv("MCP_SQL_TRUST_SERVER_CERTIFICATE", "false").strip().lower()
-    if trust_raw in ("1", "true", "yes"):
-        trust_server_certificate = True
-    elif trust_raw in ("", "0", "false", "no"):
-        trust_server_certificate = False
-    else:
-        raise ConfigError(
-            "MCP_SQL_TRUST_SERVER_CERTIFICATE must be true or false, "
-            f"got {trust_raw!r}"
-        )
+    trust_server_certificate = _env_bool("MCP_SQL_TRUST_SERVER_CERTIFICATE")
+    legacy_tls = _env_bool("MCP_SQL_LEGACY_TLS")
 
     return Settings(
         sql_server_name=server_name,  # type: ignore[arg-type]
@@ -77,4 +79,5 @@ def load_settings() -> Settings:
         password=password,
         max_rows=max_rows,
         trust_server_certificate=trust_server_certificate,
+        legacy_tls=legacy_tls,
     )

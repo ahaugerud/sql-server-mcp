@@ -7,6 +7,7 @@ from azure.core.exceptions import ClientAuthenticationError
 
 from sql_server_mcp.config import ConfigError, load_settings
 from sql_server_mcp.credentials import build_credential
+from sql_server_mcp.legacy_tls import enable_legacy_tls
 from sql_server_mcp.server import create_app
 
 
@@ -15,6 +16,8 @@ def main() -> None:
 
     try:
         settings = load_settings()
+        if settings.legacy_tls:
+            enable_legacy_tls()
         credential = (
             None if settings.uses_sql_login else build_credential(settings.tenant_id)
         )

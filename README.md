@@ -23,6 +23,7 @@ Each tenant gets its own set of environment variables:
 | `MCP_SQL_USERNAME` | no | SQL login username. If set, the server uses username + password authentication instead of Entra ID (and `MCP_AZURE_TENANT_ID` is not needed) |
 | `MCP_SQL_PASSWORD` | with username | SQL login password. Must be set together with `MCP_SQL_USERNAME` |
 | `MCP_SQL_TRUST_SERVER_CERTIFICATE` | no | Set to `true` to skip server certificate validation (needed for servers with self-signed or otherwise untrusted certificates, e.g. older on-prem SQL Server). Default: `false` |
+| `MCP_SQL_LEGACY_TLS` | no | Set to `true` for old SQL Server hosts (e.g. SQL Server 2012) that reset the connection during the TLS handshake (`TCP Provider: Error code 0x2746`). Lowers OpenSSL's security level to 0 for this process only. Default: `false` |
 | `MCP_MAX_ROWS` | no | Max rows returned per tool call (default: 25) |
 
 ## Running it
