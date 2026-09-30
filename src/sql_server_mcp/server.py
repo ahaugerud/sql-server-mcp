@@ -36,6 +36,7 @@ def _execute(
         credential,
         username=settings.username,
         password=settings.password,
+        trust_server_certificate=settings.trust_server_certificate,
     )
     try:
         cursor = conn.cursor()

@@ -38,3 +38,20 @@ def test_connect_with_username_and_password_uses_sql_auth():
         assert "UID={u};" in args[0]
         assert "PWD={p;}}w};" in args[0]
         assert "token_provider" not in kwargs
+
+
+def test_connect_trust_server_certificate_defaults_to_no():
+    with patch("sql_server_mcp.db.mssql_python.connect") as mock_connect:
+        connect("myserver", "mydb", username="u", password="p")
+
+        assert "TrustServerCertificate=no;" in mock_connect.call_args[0][0]
+
+
+def test_connect_trust_server_certificate_yes():
+    with patch("sql_server_mcp.db.mssql_python.connect") as mock_connect:
+        connect(
+            "myserver", "mydb", username="u", password="p",
+            trust_server_certificate=True,
+        )
+
+        assert "TrustServerCertificate=yes;" in mock_connect.call_args[0][0]

@@ -16,6 +16,7 @@ def connect(
     timeout_seconds: int = 30,
     username: str | None = None,
     password: str | None = None,
+    trust_server_certificate: bool = False,
 ) -> mssql_python.Connection:
     """Open a new mssql-python connection.
 
@@ -23,7 +24,11 @@ def connect(
     as `credential`; mssql-python calls `credential.get_token(SQL_SERVER_SCOPE)`
     itself, so no token needs to be acquired up front.
     """
-    conn_str = f"Server={server};Database={database};Encrypt=yes;TrustServerCertificate=no;"
+    trust = "yes" if trust_server_certificate else "no"
+    conn_str = (
+        f"Server={server};Database={database};"
+        f"Encrypt=yes;TrustServerCertificate={trust};"
+    )
 
     try:
         if username is not None:

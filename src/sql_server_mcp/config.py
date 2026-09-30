@@ -18,6 +18,7 @@ class Settings:
     username: str | None = None
     password: str | None = None
     max_rows: int = 25
+    trust_server_certificate: bool = False
 
     @property
     def uses_sql_login(self) -> bool:
@@ -57,6 +58,17 @@ def load_settings() -> Settings:
     if max_rows <= 0:
         raise ConfigError("MCP_MAX_ROWS must be a positive integer.")
 
+    trust_raw = os.getenv("MCP_SQL_TRUST_SERVER_CERTIFICATE", "false").strip().lower()
+    if trust_raw in ("1", "true", "yes"):
+        trust_server_certificate = True
+    elif trust_raw in ("", "0", "false", "no"):
+        trust_server_certificate = False
+    else:
+        raise ConfigError(
+            "MCP_SQL_TRUST_SERVER_CERTIFICATE must be true or false, "
+            f"got {trust_raw!r}"
+        )
+
     return Settings(
         sql_server_name=server_name,  # type: ignore[arg-type]
         sql_database_name=database_name,  # type: ignore[arg-type]
@@ -64,4 +76,5 @@ def load_settings() -> Settings:
         username=username,
         password=password,
         max_rows=max_rows,
+        trust_server_certificate=trust_server_certificate,
     )

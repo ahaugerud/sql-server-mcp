@@ -72,3 +72,17 @@ def test_load_settings_rejects_username_without_password(monkeypatch):
 
     with pytest.raises(ConfigError):
         load_settings()
+
+
+def test_load_settings_trust_server_certificate(monkeypatch):
+    assert load_settings().trust_server_certificate is False
+
+    monkeypatch.setenv("MCP_SQL_TRUST_SERVER_CERTIFICATE", "true")
+    assert load_settings().trust_server_certificate is True
+
+
+def test_load_settings_rejects_invalid_trust_server_certificate(monkeypatch):
+    monkeypatch.setenv("MCP_SQL_TRUST_SERVER_CERTIFICATE", "maybe")
+
+    with pytest.raises(ConfigError):
+        load_settings()

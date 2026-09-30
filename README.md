@@ -22,6 +22,7 @@ Each tenant gets its own set of environment variables:
 | `MCP_AZURE_TENANT_ID` | yes, unless using SQL login | The Entra ID tenant ID — pins auth to this directory even if your machine has other `az login` sessions active |
 | `MCP_SQL_USERNAME` | no | SQL login username. If set, the server uses username + password authentication instead of Entra ID (and `MCP_AZURE_TENANT_ID` is not needed) |
 | `MCP_SQL_PASSWORD` | with username | SQL login password. Must be set together with `MCP_SQL_USERNAME` |
+| `MCP_SQL_TRUST_SERVER_CERTIFICATE` | no | Set to `true` to skip server certificate validation (needed for servers with self-signed or otherwise untrusted certificates, e.g. older on-prem SQL Server). Default: `false` |
 | `MCP_MAX_ROWS` | no | Max rows returned per tool call (default: 25) |
 
 ## Running it
