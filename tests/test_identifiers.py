@@ -5,7 +5,7 @@ from sql_server_mcp.identifiers import InvalidIdentifierError, validate_identifi
 
 @pytest.mark.parametrize(
     "name",
-    ["Sales", "my_table", "Table123", "_private", "ABC"],
+    ["Sales", "my_table", "Table123", "_private", "ABC", "db-npprod", "db-npprod-dp"],
 )
 def test_accepts_alphanumeric_and_underscore_names(name):
     assert validate_identifier(name) == name

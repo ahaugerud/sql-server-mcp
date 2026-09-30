@@ -8,7 +8,6 @@ tenant**.
 ## Prerequisites
 
 - Python 3.14+ and [uv](https://docs.astral.sh/uv/)
-- [Microsoft ODBC Driver 18 for SQL Server](https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server) installed on your machine
 - Either the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) logged in to the target tenant (`az login --tenant <tenant-id>`), or just a browser available — the server falls back to an interactive browser login if there's no CLI session
 - An Entra ID account in the target tenant with read access to the target database (e.g. `db_datareader`)
 
@@ -20,9 +19,10 @@ Each tenant gets its own set of environment variables:
 |---|---|---|
 | `MCP_SQL_SERVER_NAME` | yes | SQL Server / Fabric SQL endpoint hostname, e.g. `xyz-xyz.datawarehouse.fabric.microsoft.com` |
 | `MCP_SQL_DATABASE_NAME` | yes | Default database to connect to |
-| `MCP_AZURE_TENANT_ID` | yes | The Entra ID tenant ID — pins auth to this directory even if your machine has other `az login` sessions active |
+| `MCP_AZURE_TENANT_ID` | yes, unless using SQL login | The Entra ID tenant ID — pins auth to this directory even if your machine has other `az login` sessions active |
+| `MCP_SQL_USERNAME` | no | SQL login username. If set, the server uses username + password authentication instead of Entra ID (and `MCP_AZURE_TENANT_ID` is not needed) |
+| `MCP_SQL_PASSWORD` | with username | SQL login password. Must be set together with `MCP_SQL_USERNAME` |
 | `MCP_MAX_ROWS` | no | Max rows returned per tool call (default: 25) |
-| `ODBC_DRIVER` | no | ODBC driver name (default: `ODBC Driver 18 for SQL Server`) |
 
 ## Running it
 
@@ -41,9 +41,10 @@ To run from a local checkout instead (e.g. during development), point
 uvx --from /path/to/sql-server-mcp sql-server-mcp
 ```
 
-On startup it checks the ODBC driver is installed, then acquires a token
-(via `az login` if available, otherwise an interactive browser prompt) and
-runs over stdio.
+On startup it acquires a token (via `az login` if available, otherwise an
+interactive browser prompt) and runs over stdio. Database connectivity uses
+[`mssql-python`](https://github.com/microsoft/mssql-python), which bundles
+its own driver — no separate ODBC driver install is required.
 
 ### Example MCP client config
 

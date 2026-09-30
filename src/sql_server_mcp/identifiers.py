@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 
-_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]+$")
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9_]+(-[A-Za-z0-9_]+)*$")
 
 
 class InvalidIdentifierError(ValueError):
@@ -13,10 +13,10 @@ class InvalidIdentifierError(ValueError):
 
 
 def validate_identifier(name: str) -> str:
-    """Return `name` if it contains only letters, digits, and underscores."""
+    """Return `name` if it contains only letters, digits, underscores, and hyphens."""
     if not name or not _IDENTIFIER_RE.match(name):
         raise InvalidIdentifierError(
             f"{name!r} is not a valid identifier: only letters, digits, "
-            "and underscores are allowed."
+            "underscores, and hyphens are allowed."
         )
     return name

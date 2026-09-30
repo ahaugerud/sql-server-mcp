@@ -9,7 +9,6 @@ from fastmcp import FastMCP
 
 from sql_server_mcp import db
 from sql_server_mcp.config import Settings
-from sql_server_mcp.credentials import get_access_token
 from sql_server_mcp.export import write_csv, write_parquet
 from sql_server_mcp.formatting import format_markdown_table
 from sql_server_mcp.schema_queries import (
@@ -26,7 +25,7 @@ from sql_server_mcp.validator import (
 
 def _execute(
     settings: Settings,
-    access_token: str,
+    credential: TokenCredential | None,
     expression: Any,
     params: list[str] | None = None,
 ) -> list[dict[str, Any]]:
@@ -34,8 +33,9 @@ def _execute(
     conn = db.connect(
         settings.sql_server_name,
         settings.sql_database_name,
-        access_token,
-        settings.odbc_driver,
+        credential,
+        username=settings.username,
+        password=settings.password,
     )
     try:
         cursor = conn.cursor()
@@ -46,7 +46,7 @@ def _execute(
         conn.close()
 
 
-def create_app(settings: Settings, credential: TokenCredential) -> FastMCP:
+def create_app(settings: Settings, credential: TokenCredential | None) -> FastMCP:
     app = FastMCP("sql-server-mcp")
 
     @app.tool(
@@ -68,7 +68,7 @@ def create_app(settings: Settings, credential: TokenCredential) -> FastMCP:
             raise SqlValidationError("Only read-only SELECT statements are allowed.")
 
         limited = apply_row_limit(statements[0], settings.max_rows)
-        rows = _execute(settings, get_access_token(credential), limited)
+        rows = _execute(settings, credential, limited)
         return format_markdown_table(rows, "Query Results")
 
     @app.tool(
@@ -80,7 +80,7 @@ def create_app(settings: Settings, credential: TokenCredential) -> FastMCP:
     )
     async def list_databases() -> str:
         limited = apply_row_limit(build_list_databases_query(), settings.max_rows)
-        rows = _execute(settings, get_access_token(credential), limited)
+        rows = _execute(settings, credential, limited)
         return format_markdown_table(rows, "Databases")
 
     @app.tool(
@@ -98,19 +98,17 @@ def create_app(settings: Settings, credential: TokenCredential) -> FastMCP:
         schema: str | None = None,
         use_wildcard: bool = True,
     ) -> str:
-        access_token = get_access_token(credential)
-
         target_databases = databases
         if not target_databases:
             # not row-capped: used to build the search below, not returned directly
-            db_rows = _execute(settings, access_token, build_list_databases_query())
+            db_rows = _execute(settings, credential, build_list_databases_query())
             target_databases = [row["database_name"] for row in db_rows]
 
         schema_query = build_search_schema_query(
             target, target_databases, name, schema, use_wildcard
         )
         limited = apply_row_limit(schema_query.expression, settings.max_rows)
-        rows = _execute(settings, access_token, limited, schema_query.params)
+        rows = _execute(settings, credential, limited, schema_query.params)
         title = "Table Search Results" if target == "tables" else "Column Search Results"
         return format_markdown_table(rows, title)
 
@@ -134,7 +132,7 @@ def create_app(settings: Settings, credential: TokenCredential) -> FastMCP:
         if not is_readonly(statements):
             raise SqlValidationError("Only read-only SELECT statements are allowed.")
 
-        rows = _execute(settings, get_access_token(credential), statements[0])
+        rows = _execute(settings, credential, statements[0])
         if not rows:
             return "Query returned 0 rows; no file was written."
 

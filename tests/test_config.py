@@ -52,3 +52,23 @@ def test_load_settings_rejects_non_positive_max_rows(monkeypatch):
 
     with pytest.raises(ConfigError):
         load_settings()
+
+
+def test_load_settings_sql_login_does_not_require_tenant(monkeypatch):
+    monkeypatch.delenv("MCP_AZURE_TENANT_ID", raising=False)
+    monkeypatch.setenv("MCP_SQL_USERNAME", "user")
+    monkeypatch.setenv("MCP_SQL_PASSWORD", "pw")
+
+    settings = load_settings()
+
+    assert settings.uses_sql_login
+    assert settings.username == "user"
+    assert settings.password == "pw"
+
+
+def test_load_settings_rejects_username_without_password(monkeypatch):
+    monkeypatch.setenv("MCP_SQL_USERNAME", "user")
+    monkeypatch.delenv("MCP_SQL_PASSWORD", raising=False)
+
+    with pytest.raises(ConfigError):
+        load_settings()

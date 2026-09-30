@@ -1,59 +1,43 @@
-"""pyodbc connection factory for AAD-token-authenticated connections."""
+"""mssql-python connection factory (AAD token or SQL username/password)."""
 
 from __future__ import annotations
 
-import struct
-
-import pyodbc
+import mssql_python
+from azure.core.credentials import TokenCredential
 
 # https://learn.microsoft.com/en-us/sql/connect/odbc/using-azure-active-directory
 SQL_SERVER_SCOPE = "https://database.windows.net/.default"
-
-# SQL_COPT_SS_ACCESS_TOKEN, defined in msodbcsql.h
-SQL_COPT_SS_ACCESS_TOKEN = 1256
-
-DEFAULT_ODBC_DRIVER = "{ODBC Driver 18 for SQL Server}"
-
-
-def ensure_odbc_driver_available(odbc_driver: str = DEFAULT_ODBC_DRIVER) -> None:
-    """Raise ConnectionError if `odbc_driver` isn't installed."""
-    driver_name = odbc_driver.strip("{}")
-    available = pyodbc.drivers()
-    if driver_name not in available:
-        raise ConnectionError(
-            f"ODBC driver {driver_name!r} is not installed on this machine "
-            f"(available drivers: {available or 'none found'}). Install the "
-            "Microsoft ODBC Driver 18 for SQL Server: "
-            "https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server"
-        )
-
-
-def build_token_struct(access_token: str) -> bytes:
-    """Pack an AAD access token into the struct pyodbc requires.
-
-    Format: 4-byte little-endian length prefix + UTF-16-LE encoded token.
-    """
-    token_bytes = access_token.encode("utf-16-le")
-    return struct.pack(f"<i{len(token_bytes)}s", len(token_bytes), token_bytes)
 
 
 def connect(
     server: str,
     database: str,
-    access_token: str,
-    odbc_driver: str = DEFAULT_ODBC_DRIVER,
+    credential: TokenCredential | None = None,
     timeout_seconds: int = 30,
-) -> pyodbc.Connection:
-    """Open a new pyodbc connection authenticated with `access_token`."""
-    conn_str = (
-        f"DRIVER={odbc_driver};SERVER={server};DATABASE={database};"
-        f"Encrypt=yes;TrustServerCertificate=no;Connection Timeout={timeout_seconds};"
-    )
-    token_struct = build_token_struct(access_token)
+    username: str | None = None,
+    password: str | None = None,
+) -> mssql_python.Connection:
+    """Open a new mssql-python connection.
+
+    With `username`/`password`, uses SQL authentication. Otherwise authenticates
+    as `credential`; mssql-python calls `credential.get_token(SQL_SERVER_SCOPE)`
+    itself, so no token needs to be acquired up front.
+    """
+    conn_str = f"Server={server};Database={database};Encrypt=yes;TrustServerCertificate=no;"
 
     try:
-        return pyodbc.connect(
-            conn_str, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct}
+        if username is not None:
+            conn_str += f"UID={_escape(username)};PWD={_escape(password or '')};"
+            return mssql_python.connect(conn_str, timeout=timeout_seconds)
+        if credential is None:
+            raise ValueError("Either a credential or username/password is required.")
+        return mssql_python.connect(
+            conn_str, token_provider=credential, timeout=timeout_seconds
         )
-    except pyodbc.Error as db_err:
+    except mssql_python.Error as db_err:
         raise ConnectionError(f"Database connection failed: {db_err}") from db_err
+
+
+def _escape(value: str) -> str:
+    """Brace-quote a connection string value so `;` and `}` are safe."""
+    return "{" + value.replace("}", "}}") + "}"

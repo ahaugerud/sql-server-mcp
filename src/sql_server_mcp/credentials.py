@@ -46,12 +46,8 @@ class _LazyCredential(TokenCredential):
 
 
 def build_credential(tenant_id: str) -> TokenCredential:
-    """Return a credential for `tenant_id`. Resolution (az-cli, falling back
+    """Return a credential for `tenant_id` (not used with SQL username/password
+    login, where no credential is needed). Resolution (az-cli, falling back
     to an interactive browser login) is deferred to the first token request
     so server startup isn't blocked on login."""
     return _LazyCredential(tenant_id)
-
-
-def get_access_token(credential: TokenCredential) -> str:
-    """Fetch a SQL-scoped access token from `credential`."""
-    return credential.get_token(SQL_SERVER_SCOPE).token

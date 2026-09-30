@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from azure.core.exceptions import ClientAuthenticationError
 
-from sql_server_mcp.credentials import build_credential, get_access_token
+from sql_server_mcp.credentials import build_credential
 
 
 def _fake_token(value="fake-token"):
@@ -84,10 +84,3 @@ def test_build_credential_caches_resolved_credential_across_calls():
         credential.get_token("scope")
 
         MockCli.assert_called_once_with(tenant_id="tenant-123")
-
-
-def test_get_access_token_returns_token_string():
-    credential = MagicMock()
-    credential.get_token.return_value = _fake_token("abc123")
-
-    assert get_access_token(credential) == "abc123"
