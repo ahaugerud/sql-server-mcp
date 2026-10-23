@@ -19,6 +19,12 @@ from sql_server_mcp.validator import (
         "WITH a AS (SELECT 1 AS x), b AS (SELECT * FROM a) SELECT * FROM b",
         "SELECT TOP 5 * FROM foo ORDER BY x",
         "-- a leading comment\nSELECT 1",
+        "SELECT 1 AS a UNION ALL SELECT 2",
+        "SELECT 1 AS a UNION SELECT 2 UNION ALL SELECT 3",
+        "SELECT 1 AS a INTERSECT SELECT 1",
+        "SELECT 1 AS a EXCEPT SELECT 2",
+        "WITH c AS (SELECT 1 AS a) SELECT a FROM c UNION ALL SELECT 2",
+        "(SELECT 1 AS a) UNION ALL (SELECT 2)",
     ],
 )
 def test_is_readonly_accepts_select_variants(sql):
@@ -85,3 +91,40 @@ def test_apply_row_limit_rejects_non_positive_max_rows():
     (stmt,) = parse_statements("SELECT 1")
     with pytest.raises(ValueError):
         apply_row_limit(stmt, 0)
+
+
+def test_apply_row_limit_wraps_union_in_outer_top():
+    (stmt,) = parse_statements("SELECT 1 AS a UNION ALL SELECT 2")
+    limited = apply_row_limit(stmt, 25)
+    sql = limited.sql(dialect="tsql")
+    assert sql.startswith("SELECT TOP 25 * FROM (")
+    assert "UNION ALL" in sql
+
+
+def test_apply_row_limit_uses_offset_fetch_on_union_with_order_by():
+    (stmt,) = parse_statements("SELECT 1 AS a UNION ALL SELECT 2 ORDER BY a")
+    limited = apply_row_limit(stmt, 25)
+    sql = limited.sql(dialect="tsql")
+    assert "OFFSET" in sql and "FETCH" in sql
+    assert "TOP" not in sql
+
+
+def test_apply_row_limit_leaves_union_with_existing_limit_alone():
+    (stmt,) = parse_statements(
+        "SELECT 1 AS a UNION ALL SELECT 2 ORDER BY a OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY"
+    )
+    sql = apply_row_limit(stmt, 25).sql(dialect="tsql")
+    assert "FETCH NEXT 5" in sql
+    assert "25" not in sql
+
+
+def test_apply_row_limit_keeps_union_offset_before_fetch():
+    (stmt,) = parse_statements("SELECT 1 AS a UNION ALL SELECT 2 ORDER BY a OFFSET 3 ROWS")
+    sql = apply_row_limit(stmt, 25).sql(dialect="tsql")
+    assert sql.count("OFFSET") == 1
+    assert sql.index("OFFSET 3") < sql.index("FETCH")
+
+
+def test_union_with_non_select_branch_fails_to_parse():
+    with pytest.raises(SqlValidationError):
+        parse_statements("SELECT 1 UNION ALL DROP TABLE foo")
