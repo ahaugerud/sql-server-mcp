@@ -9,7 +9,7 @@ from fastmcp import FastMCP
 
 from sql_server_mcp import db
 from sql_server_mcp.config import Settings
-from sql_server_mcp.export import write_csv, write_parquet
+from sql_server_mcp.export import write_csv, write_excel, write_parquet
 from sql_server_mcp.formatting import format_markdown_table
 from sql_server_mcp.schema_queries import (
     build_list_databases_query,
@@ -117,13 +117,13 @@ def create_app(settings: Settings, credential: TokenCredential | None) -> FastMC
         name="export_query",
         description=(
             "Execute a single read-only SELECT statement and write the full, "
-            "uncapped result to a local Parquet or CSV file instead of "
+            "uncapped result to a local Parquet, CSV or Excel (xlsx) file instead of "
             "returning it. Use this instead of `query` for large results or "
             "when the output will be processed by other local tools."
         ),
     )
     async def export_query(
-        sql: str, path: str, format: Literal["parquet", "csv"] = "parquet"
+        sql: str, path: str, format: Literal["parquet", "csv", "xlsx"] = "parquet"
     ) -> str:
         statements = parse_statements(sql)
         if len(statements) != 1:
@@ -137,7 +137,8 @@ def create_app(settings: Settings, credential: TokenCredential | None) -> FastMC
         if not rows:
             return "Query returned 0 rows; no file was written."
 
-        (write_parquet if format == "parquet" else write_csv)(rows, path)
+        writers = {"parquet": write_parquet, "csv": write_csv, "xlsx": write_excel}
+        writers[format](rows, path)
         return f"Wrote {len(rows)} rows to {path}\nColumns: {', '.join(rows[0].keys())}"
 
     return app

@@ -35,3 +35,36 @@ def test_write_csv_is_utf8_regardless_of_locale(tmp_path, monkeypatch):
     write_csv(rows, str(path))
 
     assert path.read_bytes().decode("utf-8").splitlines()[1] == "Å☃"
+
+
+def test_write_excel_roundtrip(tmp_path):
+    from datetime import timezone
+
+    from openpyxl import load_workbook
+
+    from sql_server_mcp.export import write_excel
+
+    rows = [
+        {"id": 1, "name": "Å\x00b", "ts": datetime(2026, 1, 1, tzinfo=timezone.utc)},
+        {"id": 2, "name": None, "ts": None},
+    ]
+    path = tmp_path / "out.xlsx"
+
+    write_excel(rows, str(path))
+
+    ws = load_workbook(path).active
+    assert [[c.value for c in r] for r in ws.iter_rows()] == [
+        ["id", "name", "ts"],
+        [1, "Åb", datetime(2026, 1, 1)],
+        [2, None, None],
+    ]
+
+
+def test_write_excel_rejects_too_many_rows(tmp_path, monkeypatch):
+    import pytest
+
+    from sql_server_mcp import export
+
+    monkeypatch.setattr(export, "EXCEL_MAX_ROWS", 1)
+    with pytest.raises(ValueError, match="exceeds Excel"):
+        export.write_excel([{"a": 1}, {"a": 2}], str(tmp_path / "x.xlsx"))

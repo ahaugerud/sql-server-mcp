@@ -1,6 +1,6 @@
 [project]
 name = "sql-server-mcp"
-version = "0.5.4"
+version = "0.6.0"
 description = "Local, single-user MCP server for read-only SQL Server / MS Fabric queries - one process per tenant"
 readme = "README.md"
 license = "MIT"
@@ -21,6 +21,7 @@ dependencies = [
     "azure-identity>=1.25.3",
     "fastmcp>=3.3.0",
     "mssql-python>=1.14.0",
+    "openpyxl>=3.1.5",
     "pyarrow>=25.0.0",
     "sqlglot>=26.0.0",
 ]

@@ -82,7 +82,7 @@ One block per tenant:
 - **`query(sql)`** — run a single read-only `SELECT`. Table references must be fully qualified as `database.schema.table`; there's no mutable "active database". Returns at most `MCP_MAX_ROWS` rows, as a Markdown table.
 - **`list_databases()`** — list user databases with status/metadata.
 - **`search_schema(target, name, databases?, schema?, use_wildcard?)`** — search table or column metadata via `INFORMATION_SCHEMA` across one or more databases (all of them if `databases` is omitted).
-- **`export_query(sql, path, format?)`** — run a single read-only `SELECT` and write the full, uncapped result to a local Parquet or CSV file instead of returning it. For large results or when the output feeds into other local tools (pandas, DuckDB, etc.).
+- **`export_query(sql, path, format?)`** — run a single read-only `SELECT` and write the full, uncapped result to a local Parquet, CSV or Excel (`xlsx`, max 1,048,575 rows) file instead of returning it. For large results or when the output feeds into other local tools (pandas, DuckDB, etc.).
 
 ## Development
 
