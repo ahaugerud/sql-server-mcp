@@ -25,3 +25,13 @@ def test_write_csv_roundtrip(tmp_path):
 
     content = path.read_text()
     assert content.splitlines() == ["id,name", "1,a", "2,b"]
+
+
+def test_write_csv_is_utf8_regardless_of_locale(tmp_path, monkeypatch):
+    monkeypatch.setattr("locale.getpreferredencoding", lambda *a, **k: "cp1252")
+    rows = [{"name": "Å☃"}]
+    path = tmp_path / "out.csv"
+
+    write_csv(rows, str(path))
+
+    assert path.read_bytes().decode("utf-8").splitlines()[1] == "Å☃"

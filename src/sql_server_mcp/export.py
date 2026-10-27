@@ -14,7 +14,7 @@ def write_parquet(rows: list[dict[str, Any]], path: str) -> None:
 
 
 def write_csv(rows: list[dict[str, Any]], path: str) -> None:
-    with open(path, "w", newline="") as f:
+    with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
